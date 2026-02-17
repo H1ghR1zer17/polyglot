@@ -1,13 +1,14 @@
 import { Message, TextChannel } from 'discord.js';
 import { LanguageCode, ALL_LANGUAGE_CODES, getLanguageByChannelId } from '../config.js';
 import { translateToAll } from '../translator.js';
+import { getOrCreateWebhook } from '../webhooks.js';
 
 export async function handleMessageCreate(
   message: Message,
   channelMap: Record<LanguageCode, string>
 ): Promise<void> {
-  // Ignore bot messages to prevent translation loops
-  if (message.author.bot) return;
+  // Ignore bot and webhook messages to prevent translation loops
+  if (message.author.bot || message.webhookId) return;
 
   // Ignore messages outside the configured language channels
   const sourceLang = getLanguageByChannelId(message.channelId, channelMap);
@@ -27,6 +28,9 @@ export async function handleMessageCreate(
     return;
   }
 
+  const username = message.member?.displayName ?? message.author.username;
+  const avatarURL = message.author.displayAvatarURL();
+
   for (const [targetLang, translatedText] of translations) {
     const targetChannelId = channelMap[targetLang];
     const targetChannel = message.client.channels.cache.get(targetChannelId);
@@ -36,6 +40,11 @@ export async function handleMessageCreate(
       continue;
     }
 
-    await (targetChannel as TextChannel).send(translatedText);
+    try {
+      const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
+      await webhook.send({ content: translatedText, username, avatarURL });
+    } catch (err) {
+      console.error(`[Polyglot] Failed to send message for "${targetLang}":`, err);
+    }
   }
 }
