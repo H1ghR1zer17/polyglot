@@ -57,9 +57,8 @@ Additional rules:
     throw new Error('Unexpected response type from Claude');
   }
 
-  // Extract content from <result> tags (prefill starts with <result>, Claude closes it)
-  const match = block.text.match(/<result>([\s\S]*?)<\/result>/);
-  const result = (match ? match[1] : block.text).trim();
+  // Prefill starts with <result>, so block.text is "translation</result>" — strip the closing tag
+  const result = block.text.replace('</result>', '').trim();
   return result === '[SKIP]' ? null : result;
 }
 
