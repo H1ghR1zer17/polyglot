@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import { Client, GatewayIntentBits, Events } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction } from 'discord.js';
 import { ALL_LANGUAGE_CODES, LanguageCode } from './config.js';
 import { handleMessageCreate } from './handlers/messageCreate.js';
+import { execute as executeTranslate } from './commands/translate.js';
 
 // ---------------------------------------------------------------------------
 // Validate required environment variables
@@ -40,10 +41,26 @@ client.once(Events.ClientReady, (c) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Message translation
+// ---------------------------------------------------------------------------
 client.on(Events.MessageCreate, (message) => {
   handleMessageCreate(message, channelMap).catch((err) => {
     console.error('[Polyglot] Unhandled error in messageCreate:', err);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Slash commands
+// ---------------------------------------------------------------------------
+client.on(Events.InteractionCreate, (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'translate') {
+    executeTranslate(interaction as ChatInputCommandInteraction).catch((err) => {
+      console.error('[Polyglot] Unhandled error in /translate:', err);
+    });
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
