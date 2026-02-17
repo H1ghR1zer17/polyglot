@@ -76,3 +76,12 @@ client.on(Events.InteractionCreate, (interaction) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown — disconnect immediately so Render deploys don't overlap
+// ---------------------------------------------------------------------------
+process.on('SIGTERM', () => {
+  console.log('[Polyglot] SIGTERM received, disconnecting...');
+  client.destroy();
+  process.exit(0);
+});
