@@ -2,6 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import { LanguageCode, ALL_LANGUAGE_CODES, getLanguageByChannelId } from '../config.js';
 import { translateToAll } from '../translator.js';
 import { getOrCreateWebhook } from '../webhooks.js';
+import { linkMessages } from '../messageMap.js';
 
 export async function handleMessageCreate(
   message: Message,
@@ -30,6 +31,7 @@ export async function handleMessageCreate(
 
   const username = message.member?.displayName ?? message.author.username;
   const avatarURL = message.author.displayAvatarURL();
+  const linkedIds: string[] = [message.id];
 
   for (const [targetLang, translatedText] of translations) {
     const targetChannelId = channelMap[targetLang];
@@ -42,9 +44,15 @@ export async function handleMessageCreate(
 
     try {
       const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
-      await webhook.send({ content: translatedText, username, avatarURL });
+      const sent = await webhook.send({ content: translatedText, username, avatarURL });
+      linkedIds.push(sent.id);
     } catch (err) {
       console.error(`[Polyglot] Failed to send message for "${targetLang}":`, err);
     }
+  }
+
+  // Link original + all translations so reactions can be mirrored
+  if (linkedIds.length > 1) {
+    linkMessages(linkedIds);
   }
 }

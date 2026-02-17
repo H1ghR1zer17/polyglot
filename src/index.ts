@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, Events, ChatInputCommandInteraction } from 'discord.js';
 import { ALL_LANGUAGE_CODES, LanguageCode } from './config.js';
 import { handleMessageCreate } from './handlers/messageCreate.js';
+import { handleMessageReactionAdd } from './handlers/messageReactionAdd.js';
 import { execute as executeTranslate } from './commands/translate.js';
 
 // ---------------------------------------------------------------------------
@@ -30,7 +31,9 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
   ],
+  partials: [Partials.Message, Partials.Reaction],
 });
 
 client.once(Events.ClientReady, (c) => {
@@ -47,6 +50,15 @@ client.once(Events.ClientReady, (c) => {
 client.on(Events.MessageCreate, (message) => {
   handleMessageCreate(message, channelMap).catch((err) => {
     console.error('[Polyglot] Unhandled error in messageCreate:', err);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reaction mirroring
+// ---------------------------------------------------------------------------
+client.on(Events.MessageReactionAdd, (reaction, user) => {
+  handleMessageReactionAdd(reaction, user, channelMap).catch((err) => {
+    console.error('[Polyglot] Unhandled error in messageReactionAdd:', err);
   });
 });
 
