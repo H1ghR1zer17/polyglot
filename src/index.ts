@@ -36,8 +36,15 @@ const client = new Client({
   partials: [Partials.Message, Partials.Reaction],
 });
 
+// Grace period: skip messages for 10s after ready to avoid overlap with
+// the previous instance during Render zero-downtime deploys.
+const STARTUP_GRACE_MS = 10_000;
+let readyAt = Infinity;
+
 client.once(Events.ClientReady, (c) => {
+  readyAt = Date.now();
   console.log(`[Polyglot] Logged in as ${c.user.tag}`);
+  console.log(`[Polyglot] Grace period: ${STARTUP_GRACE_MS / 1000}s before processing messages`);
   console.log(`[Polyglot] Watching channels:`);
   for (const lang of ALL_LANGUAGE_CODES) {
     console.log(`  ${lang.toUpperCase()} → ${channelMap[lang]}`);
@@ -48,6 +55,7 @@ client.once(Events.ClientReady, (c) => {
 // Message translation
 // ---------------------------------------------------------------------------
 client.on(Events.MessageCreate, (message) => {
+  if (Date.now() - readyAt < STARTUP_GRACE_MS) return;
   handleMessageCreate(message, channelMap).catch((err) => {
     console.error('[Polyglot] Unhandled error in messageCreate:', err);
   });
