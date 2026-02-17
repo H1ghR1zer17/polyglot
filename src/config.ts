@@ -23,8 +23,8 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     label: 'Spanish',
     channelEnvKey: 'CHANNEL_ES',
     regionalNote:
-      'Use Mexican Spanish specifically. Use vocabulary, slang, and expressions native to Mexico — including Mexican street slang and colloquialisms. Avoid Castilian/Spain Spanish and avoid generic Latin American terms when a more specific Mexican word exists. Use "ustedes" not "vosotros". Match the tone and register of the original message (casual, formal, slang, etc.).',
-    jsonKey: 'mexican_spanish_translation_with_local_slang_colloquialisms_and_profanity',
+      'Use Mexican Spanish from Mexico City (CDMX/chilango) specifically. Use vocabulary, slang, and expressions native to la Ciudad de México — including chilango street slang, albures, and colloquialisms. Avoid Castilian/Spain Spanish and avoid generic Latin American terms when a more specific CDMX word exists. Use "ustedes" not "vosotros". Match the tone and register of the original message (casual, formal, slang, etc.).',
+    jsonKey: 'cdmx_chilango_spanish_translation_with_mexico_city_slang_albures_and_profanity',
   },
   pt: {
     code: 'pt',
