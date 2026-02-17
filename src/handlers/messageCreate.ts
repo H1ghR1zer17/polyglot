@@ -12,30 +12,11 @@ const processed = new Set<string>();
 const CACHE_TTL = 60_000; // 1 minute
 
 /**
- * If the message is a reply, try to find the corresponding translated message
- * in the target channel and return a quote block.
+ * If the message is a reply, find the linked message ID in the target channel.
  */
-async function buildReplyQuote(
-  message: Message,
-  targetChannelId: string
-): Promise<string | null> {
+function findReplyTarget(message: Message, targetChannelId: string): string | null {
   if (!message.reference?.messageId) return null;
-
-  const refId = message.reference.messageId;
-  const linkedRefId = getLinkedMessageForChannel(refId, targetChannelId);
-  if (!linkedRefId) return null;
-
-  // Fetch the linked message to get its content for the quote
-  try {
-    const targetChannel = message.client.channels.cache.get(targetChannelId);
-    if (!targetChannel?.isTextBased()) return null;
-    const refMsg = await targetChannel.messages.fetch(linkedRefId);
-    const quoted = refMsg.content.split('\n')[0]; // first line only
-    const author = refMsg.author.username;
-    return `> **${author}:** ${quoted.substring(0, 100)}${quoted.length > 100 ? '...' : ''}`;
-  } catch {
-    return null;
-  }
+  return getLinkedMessageForChannel(message.reference.messageId, targetChannelId);
 }
 
 export async function handleMessageCreate(
@@ -107,12 +88,21 @@ export async function handleMessageCreate(
     }
 
     try {
-      // Build reply quote if this message is a reply
-      const quote = await buildReplyQuote(message, targetChannelId);
-      const content = quote ? `${quote}\n${translatedText}` : translatedText;
+      const replyTargetId = findReplyTarget(message, targetChannelId);
 
-      const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
-      const sent = await webhook.send({ content, username, avatarURL });
+      let sent: Message;
+      if (replyTargetId) {
+        // Use bot's channel.send with reply — shows native Discord reply arrow
+        sent = await (targetChannel as TextChannel).send({
+          content: `**${username}:** ${translatedText}`,
+          reply: { messageReference: replyTargetId, failIfNotExists: false },
+        });
+      } else {
+        // Regular message — use webhook to show as the original user
+        const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
+        sent = await webhook.send({ content: translatedText, username, avatarURL }) as Message;
+      }
+
       linkedMsgs.push({ messageId: sent.id, channelId: targetChannelId });
     } catch (err) {
       console.error(`[Polyglot] Failed to send message for "${targetLang}":`, err);
