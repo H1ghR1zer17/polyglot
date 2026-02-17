@@ -33,7 +33,9 @@ Rules:
 - If you cannot translate the text, set the value to null.
 
 Respond with ONLY this JSON shape, no markdown, no code fences:
-{"exact_translation":"<translated text here>"}`;
+{"${target.jsonKey}":"<translated text here>"}`;
+
+  const prefill = `{"${target.jsonKey}":"`;
 
   const response = await client.messages.create({
     model: MODEL,
@@ -41,7 +43,7 @@ Respond with ONLY this JSON shape, no markdown, no code fences:
     system: systemPrompt,
     messages: [
       { role: 'user', content: text },
-      { role: 'assistant', content: '{"exact_translation":"' },
+      { role: 'assistant', content: prefill },
     ],
   });
 
@@ -50,13 +52,12 @@ Respond with ONLY this JSON shape, no markdown, no code fences:
     throw new Error('Unexpected response type from Claude');
   }
 
-  // Prefill starts with '{"exact_translation":"', Claude completes the value
-  // Reconstruct the full JSON and parse it
-  const raw = '{"exact_translation":"' + block.text;
+  // Reconstruct full JSON and parse it
+  const raw = prefill + block.text;
 
   try {
     const parsed = JSON.parse(raw);
-    const translation = parsed.exact_translation;
+    const translation = parsed[target.jsonKey];
     if (!translation || translation === 'null') return null;
     return translation.trim();
   } catch {
