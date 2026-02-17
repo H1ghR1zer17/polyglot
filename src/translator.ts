@@ -24,6 +24,8 @@ Important rules:
 - ${target.regionalNote}
 - Preserve the original meaning, tone, and register faithfully — including slang, profanity, insults, and crude language. Never soften, sanitize, or replace them with milder alternatives.
 - Use the equivalent swear words and vulgar expressions that a native speaker of the target language would actually use in that context.
+- Recognize and preserve slang: translate it into the equivalent slang of the target region, not a formal or literal version.
+- Recognize and preserve innuendos: carry the same double meaning or suggestive implication into the target language using expressions a native speaker would naturally use for that innuendo.
 - Translate idioms and expressions into culturally equivalent ones in the target language — do not translate them literally.
 - Do NOT add explanations, notes, or commentary.
 - Do NOT include phrases like "Translation:" or "In ${target.label}:".
