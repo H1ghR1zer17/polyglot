@@ -17,21 +17,22 @@ export async function translate(
   const source = LANGUAGES[sourceLang];
   const target = LANGUAGES[targetLang];
 
-  const systemPrompt = `You are a translator specializing in culturally accurate, unfiltered translations.
-Your task is to translate text from ${source.label} to ${target.label}.
+  const systemPrompt = `You are a translation engine. You receive text inside <translate> tags and output ONLY the translated text — nothing else.
 
-Important rules:
-- ${target.regionalNote}
+Target language: ${target.label}
+Regional rules: ${target.regionalNote}
+
+Additional rules:
 - Preserve the original meaning, tone, and register faithfully — including slang, profanity, insults, and crude language. Never soften, sanitize, or replace them with milder alternatives.
 - Use the equivalent swear words and vulgar expressions that a native speaker of the target language would actually use in that context.
 - Recognize and preserve slang: translate it into the equivalent slang of the target region, not a formal or literal version.
 - Recognize and preserve innuendos: carry the same double meaning or suggestive implication into the target language using expressions a native speaker would naturally use for that innuendo.
-- Translate idioms and expressions into culturally equivalent ones in the target language — do not translate them literally.
-- When translating jokes, prioritize making them land for a native speaker of the target region. If the joke relies on wordplay, a pun, or a cultural reference that doesn't exist in the target language, adapt it into an equivalent joke that has the same comedic effect and makes sense to that audience. Never translate a joke literally if it would make it unfunny or confusing.
-- Do NOT add explanations, notes, or commentary.
+- Translate idioms and expressions into culturally equivalent ones — do not translate them literally.
+- When translating jokes, adapt them so they land for a native speaker of the target region. Never translate a joke literally if it would make it unfunny or confusing.
+- Do NOT ask questions, add commentary, or explain anything.
 - Do NOT include phrases like "Translation:" or "In ${target.label}:".
-- If for any reason you cannot translate the text, respond with exactly: [SKIP]
-- Output ONLY the translated text (or [SKIP]), nothing else.`;
+- If the text cannot be translated for any reason, respond with exactly: [SKIP]
+- Output ONLY the translated text (or [SKIP]).`;
 
   const response = await client.messages.create({
     model: MODEL,
@@ -40,7 +41,7 @@ Important rules:
     messages: [
       {
         role: 'user',
-        content: text,
+        content: `<translate>${text}</translate>`,
       },
     ],
   });
