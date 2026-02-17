@@ -15,7 +15,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     code: 'en',
     label: 'English',
     channelEnvKey: 'CHANNEL_EN',
-    regionalNote: 'Use clear, natural, casual English — like texting a friend. Default to informal tone unless the original message is clearly formal.',
+    regionalNote: 'Use clear, natural, conversational English. Think how an educated young adult texts casually — relaxed but not exaggerated slang. Only use slang where it genuinely fits.',
     jsonKey: 'natural_english_translation_preserving_tone_slang_and_profanity',
   },
   es: {
@@ -31,7 +31,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     label: 'Portuguese',
     channelEnvKey: 'CHANNEL_PT',
     regionalNote:
-      'Use Brazilian Portuguese from Rio de Janeiro specifically. Default to casual, everyday carioca speech — like texting a friend from Rio. Use carioca vocabulary, slang, and expressions — including Rio street slang and colloquialisms. Use "você" as the default second person. Prefer the informal, warm speech style typical of Rio de Janeiro.',
+      'Use Brazilian Portuguese from Rio de Janeiro. Default to relaxed, conversational tone — not overly formal but not exaggerated carioca slang either. Think how an educated young adult from Rio texts casually. Use natural carioca vocabulary and expressions but do NOT overdo it — only use Rio slang where it genuinely fits. Use "você" as the default second person.',
     jsonKey: 'carioca_rio_brazilian_portuguese_translation_with_rio_slang_informal_tone_and_profanity',
   },
 };
