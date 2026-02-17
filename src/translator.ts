@@ -17,38 +17,31 @@ export async function translate(
   const source = LANGUAGES[sourceLang];
   const target = LANGUAGES[targetLang];
 
-  const systemPrompt = `You are a translation engine. You receive text inside <translate> tags and output ONLY the translated text inside <result> tags — nothing else.
+  const systemPrompt = `You are a translation engine. Translate the user's text and respond with ONLY a JSON object — nothing else.
 
+Source language: ${source.label}
 Target language: ${target.label}
 Regional rules: ${target.regionalNote}
 
-Additional rules:
+Rules:
 - Preserve the original meaning, tone, and register faithfully — including slang, profanity, insults, and crude language. Never soften, sanitize, or replace them with milder alternatives.
-- Use the equivalent swear words and vulgar expressions that a native speaker of the target language would actually use in that context.
-- Recognize and preserve slang: translate it into the equivalent slang of the target region, not a formal or literal version.
-- Recognize and preserve innuendos: carry the same double meaning or suggestive implication into the target language using expressions a native speaker would naturally use for that innuendo.
-- Translate idioms and expressions into culturally equivalent ones — do not translate them literally.
-- When translating jokes, adapt them so they land for a native speaker of the target region. Never translate a joke literally if it would make it unfunny or confusing.
-- Do NOT ask questions, add commentary, or explain anything.
-- Do NOT include phrases like "Translation:" or "In ${target.label}:".
-- If the text cannot be translated for any reason, respond with exactly: <result>[SKIP]</result>
-- Output format: <result>translated text here</result>`;
+- Use the equivalent swear words and vulgar expressions that a native speaker would actually use.
+- Translate slang into the equivalent regional slang, not a formal version.
+- Preserve innuendos — carry the same double meaning into the target language.
+- Translate idioms and expressions into culturally equivalent ones, not literally.
+- Adapt jokes so they land for a native speaker of the target region.
+- If you cannot translate the text, set the value to null.
+
+Respond with ONLY this JSON shape, no markdown, no code fences:
+{"exact_translation":"<translated text here>"}`;
 
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
-      {
-        role: 'user',
-        content: `<translate>${text}</translate>`,
-      },
-      {
-        // Assistant prefill — forces Claude to continue with the translation
-        // instead of opening a conversational response
-        role: 'assistant',
-        content: '<result>',
-      },
+      { role: 'user', content: text },
+      { role: 'assistant', content: '{"exact_translation":"' },
     ],
   });
 
@@ -57,11 +50,20 @@ Additional rules:
     throw new Error('Unexpected response type from Claude');
   }
 
-  // Prefill starts with <result>, so block.text is "translation</result>..."
-  // Take only what's before the closing tag
-  const raw = block.text.split('</result>')[0].trim();
-  const result = raw;
-  return result === '[SKIP]' ? null : result;
+  // Prefill starts with '{"exact_translation":"', Claude completes the value
+  // Reconstruct the full JSON and parse it
+  const raw = '{"exact_translation":"' + block.text;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const translation = parsed.exact_translation;
+    if (!translation || translation === 'null') return null;
+    return translation.trim();
+  } catch {
+    // Fallback: extract text before the closing quote
+    const match = block.text.match(/^(.*?)"/);
+    return match ? match[1].trim() || null : null;
+  }
 }
 
 /**
@@ -80,7 +82,6 @@ export async function translateToAll(
     })
   );
 
-  // Filter out skipped translations
-  const filtered = results.filter(([ , value]) => value !== null) as [LanguageCode, string][];
+  const filtered = results.filter(([, value]) => value !== null) as [LanguageCode, string][];
   return new Map(filtered);
 }
