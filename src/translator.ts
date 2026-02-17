@@ -50,48 +50,35 @@ export async function translate(
   // Pull out Discord mentions/emojis so Claude doesn't touch them
   const { cleaned: textToTranslate, restore } = extractDiscordTokens(text);
 
-  const systemPrompt = `You are a strict ${source.label}-to-${target.label} translation function. You are NOT a chatbot. You do NOT converse, explain, comment, refuse, or add anything. You ONLY translate.
+  const jsonKey = target.jsonKey;
+
+  const systemPrompt = `You are a ${source.label}-to-${target.label} translation function. You only translate. You never converse, explain, or add anything.
 
 ${target.regionalNote}
 
-RULES:
-1. Translate the input text. That is your ONLY job.
-2. Never add commentary, explanations, warnings, or notes.
-3. Never ask questions or refuse to translate.
-4. Preserve profanity, slang, insults, and crude language — translate them into equivalent expressions in ${target.label}. Never censor or soften.
-5. Preserve innuendos and double meanings.
-6. Adapt idioms and jokes to land naturally in ${target.label}.
-7. Preserve {{number}} placeholders exactly as-is.
-8. Output the translation exactly ONCE — never duplicate.
-9. If the input is already in ${target.label}, return it unchanged.
+Instructions:
+- Translate the user's text from ${source.label} to ${target.label}.
+- Preserve profanity, slang, insults, innuendos, and crude language — translate them into equivalent expressions. Never censor or soften.
+- Adapt idioms and jokes to land naturally in ${target.label}.
+- Preserve {{number}} placeholders exactly as-is.
+- If the input is already in ${target.label}, return it unchanged.
 
-RESPONSE FORMAT — always respond with this exact JSON structure, nothing else:
-{"${target.jsonKey}":"<your single translation here>"}`;
+Fill this out:
+{"${jsonKey}":""}
 
-  // Few-shot examples to lock in the behavior
-  const exampleInput = source.code === 'en'
-    ? 'what the hell is going on lmao {{0}} you seeing this?'
-    : source.code === 'es'
-      ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?'
-      : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?';
+Example:
+User: ${source.code === 'en' ? 'what the hell is going on lmao {{0}} you seeing this?' : source.code === 'es' ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?' : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?'}
 
-  const exampleOutput = target.code === 'en'
-    ? 'what the hell is going on lmao {{0}} you seeing this?'
-    : target.code === 'es'
-      ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?'
-      : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?';
+Response:
+{"${jsonKey}":"${target.code === 'en' ? 'what the hell is going on lmao {{0}} you seeing this?' : target.code === 'es' ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?' : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?'}"}`;
 
-  const prefill = `{"${target.jsonKey}":"`;
+  const prefill = `{"${jsonKey}":"`;
 
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
-      // Few-shot example
-      { role: 'user', content: exampleInput },
-      { role: 'assistant', content: `{"${target.jsonKey}":"${exampleOutput}"}` },
-      // Actual input
       { role: 'user', content: textToTranslate },
       { role: 'assistant', content: prefill },
     ],
@@ -107,7 +94,7 @@ RESPONSE FORMAT — always respond with this exact JSON structure, nothing else:
 
   try {
     const parsed = JSON.parse(raw);
-    const translation = parsed[target.jsonKey];
+    const translation = parsed[jsonKey];
     if (!translation || translation === 'null') return null;
     return restore(dedup(translation.trim()));
   } catch {
