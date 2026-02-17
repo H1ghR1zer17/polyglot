@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel } from 'discord.js';
 import { LanguageCode, LANGUAGES, ALL_LANGUAGE_CODES } from '../config.js';
 import { translateToAll } from '../translator.js';
 
@@ -10,7 +10,7 @@ const LANGUAGE_FLAGS: Record<LanguageCode, string> = {
 
 export const data = new SlashCommandBuilder()
   .setName('translate')
-  .setDescription('Test a translation (ephemeral — only you can see the result)')
+  .setDescription('Send a translated message to all language channels')
   .addStringOption((opt) =>
     opt
       .setName('text')
@@ -29,7 +29,10 @@ export const data = new SlashCommandBuilder()
       )
   );
 
-export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+export async function execute(
+  interaction: ChatInputCommandInteraction,
+  channelMap: Record<LanguageCode, string>
+): Promise<void> {
   const text = interaction.options.getString('text', true);
   const sourceLang = interaction.options.getString('from', true) as LanguageCode;
   const targetLangs = ALL_LANGUAGE_CODES.filter((l) => l !== sourceLang);
@@ -45,12 +48,23 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return;
   }
 
-  const lines = [
-    `${LANGUAGE_FLAGS[sourceLang]} **${LANGUAGES[sourceLang].label}:** ${text}`,
-    ...targetLangs.map(
-      (lang) => `${LANGUAGE_FLAGS[lang]} **${LANGUAGES[lang].label}:** ${translations.get(lang) ?? '—'}`
-    ),
-  ];
+  // Post source text to its own channel
+  const sourceChannelId = channelMap[sourceLang];
+  const sourceChannel = interaction.client.channels.cache.get(sourceChannelId);
+  if (sourceChannel?.isTextBased()) {
+    await (sourceChannel as TextChannel).send(text);
+  }
 
-  await interaction.editReply({ content: lines.join('\n') });
+  // Post each translation to its channel
+  for (const [targetLang, translatedText] of translations) {
+    const targetChannelId = channelMap[targetLang];
+    const targetChannel = interaction.client.channels.cache.get(targetChannelId);
+    if (targetChannel?.isTextBased()) {
+      await (targetChannel as TextChannel).send(translatedText);
+    }
+  }
+
+  await interaction.editReply({
+    content: `${LANGUAGE_FLAGS[sourceLang]} Sent to all channels.`,
+  });
 }

@@ -57,7 +57,7 @@ client.on(Events.InteractionCreate, (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'translate') {
-    executeTranslate(interaction as ChatInputCommandInteraction).catch((err) => {
+    executeTranslate(interaction as ChatInputCommandInteraction, channelMap).catch((err) => {
       console.error('[Polyglot] Unhandled error in /translate:', err);
     });
   }
