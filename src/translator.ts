@@ -13,7 +13,7 @@ export async function translate(
   text: string,
   sourceLang: LanguageCode,
   targetLang: LanguageCode
-): Promise<string> {
+): Promise<string | null> {
   const source = LANGUAGES[sourceLang];
   const target = LANGUAGES[targetLang];
 
@@ -30,7 +30,8 @@ Important rules:
 - When translating jokes, prioritize making them land for a native speaker of the target region. If the joke relies on wordplay, a pun, or a cultural reference that doesn't exist in the target language, adapt it into an equivalent joke that has the same comedic effect and makes sense to that audience. Never translate a joke literally if it would make it unfunny or confusing.
 - Do NOT add explanations, notes, or commentary.
 - Do NOT include phrases like "Translation:" or "In ${target.label}:".
-- Output ONLY the translated text, nothing else.`;
+- If for any reason you cannot translate the text, respond with exactly: [SKIP]
+- Output ONLY the translated text (or [SKIP]), nothing else.`;
 
   const response = await client.messages.create({
     model: MODEL,
@@ -49,7 +50,8 @@ Important rules:
     throw new Error('Unexpected response type from Claude');
   }
 
-  return block.text.trim();
+  const result = block.text.trim();
+  return result === '[SKIP]' ? null : result;
 }
 
 /**
@@ -64,9 +66,11 @@ export async function translateToAll(
   const results = await Promise.all(
     targetLangs.map(async (target) => {
       const translated = await translate(text, sourceLang, target);
-      return [target, translated] as [LanguageCode, string];
+      return [target, translated] as [LanguageCode, string | null];
     })
   );
 
-  return new Map(results);
+  // Filter out skipped translations
+  const filtered = results.filter(([ , value]) => value !== null) as [LanguageCode, string][];
+  return new Map(filtered);
 }
