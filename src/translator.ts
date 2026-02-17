@@ -57,8 +57,10 @@ Additional rules:
     throw new Error('Unexpected response type from Claude');
   }
 
-  // Prefill starts with <result>, so block.text is "translation</result>" — strip the closing tag
-  const result = block.text.replace('</result>', '').trim();
+  // Prefill starts with <result>, so block.text is "translation</result>..."
+  // Take only what's before the closing tag
+  const raw = block.text.split('</result>')[0].trim();
+  const result = raw;
   return result === '[SKIP]' ? null : result;
 }
 
