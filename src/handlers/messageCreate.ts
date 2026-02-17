@@ -9,6 +9,8 @@ const EMOJI_ONLY = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|<a?:\w+:\
 
 /** Dedup cache — prevents processing the same message twice */
 const processed = new Set<string>();
+/** Send-side dedup — prevents sending to the same channel twice for one source message */
+const sent = new Set<string>();
 const CACHE_TTL = 60_000; // 1 minute
 
 /**
@@ -86,6 +88,12 @@ export async function handleMessageCreate(
       console.warn(`[Polyglot] Channel for "${targetLang}" not found or not text-based.`);
       continue;
     }
+
+    // Send-side dedup — skip if we already sent for this source→target combo
+    const sendKey = `${message.id}:${targetChannelId}`;
+    if (sent.has(sendKey)) continue;
+    sent.add(sendKey);
+    setTimeout(() => sent.delete(sendKey), CACHE_TTL);
 
     try {
       const replyTargetId = findReplyTarget(message, targetChannelId);

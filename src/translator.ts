@@ -26,6 +26,16 @@ function extractDiscordTokens(text: string): { cleaned: string; restore: (transl
 }
 
 /**
+ * If Claude repeated the same translation on multiple lines, collapse to one.
+ */
+function dedup(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (lines.length <= 1) return text;
+  const unique = [...new Set(lines)];
+  return unique.join('\n');
+}
+
+/**
  * Translates `text` from `sourceLang` into `targetLang` using Claude Haiku.
  * Returns only the translated text with no extra commentary.
  */
@@ -99,14 +109,14 @@ RESPONSE FORMAT — always respond with this exact JSON structure, nothing else:
     const parsed = JSON.parse(raw);
     const translation = parsed[target.jsonKey];
     if (!translation || translation === 'null') return null;
-    return restore(translation.trim());
+    return restore(dedup(translation.trim()));
   } catch {
     // Fallback: strip any JSON artifacts and return the raw text
     const cleaned = block.text
       .replace(/"\s*\}\s*$/, '')  // trailing "}
       .replace(/^"|"$/g, '')      // stray quotes
       .trim();
-    return cleaned ? restore(cleaned) : null;
+    return cleaned ? restore(dedup(cleaned)) : null;
   }
 }
 
