@@ -1,30 +1,7 @@
-import {
-  Message,
-  TextChannel,
-  EmbedBuilder,
-  Colors,
-} from 'discord.js';
-import {
-  LanguageCode,
-  LANGUAGES,
-  ALL_LANGUAGE_CODES,
-  getLanguageByChannelId,
-} from '../config.js';
+import { Message, TextChannel } from 'discord.js';
+import { LanguageCode, ALL_LANGUAGE_CODES, getLanguageByChannelId } from '../config.js';
 import { translateToAll } from '../translator.js';
-
-/** Color per language for embed sidebars */
-const LANGUAGE_COLORS: Record<LanguageCode, number> = {
-  en: Colors.Blue,
-  es: Colors.Red,
-  pt: Colors.Green,
-};
-
-/** Flag emoji per language */
-const LANGUAGE_FLAGS: Record<LanguageCode, string> = {
-  en: '🇺🇸',
-  es: '🇲🇽',
-  pt: '🇧🇷',
-};
+import { getOrCreateWebhook } from '../webhooks.js';
 
 export async function handleMessageCreate(
   message: Message,
@@ -51,7 +28,7 @@ export async function handleMessageCreate(
     return;
   }
 
-  // Post each translation into the corresponding channel
+  // Post each translation via webhook so it appears as the original user
   for (const [targetLang, translatedText] of translations) {
     const targetChannelId = channelMap[targetLang];
     const targetChannel = message.client.channels.cache.get(targetChannelId);
@@ -61,18 +38,15 @@ export async function handleMessageCreate(
       continue;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(LANGUAGE_COLORS[sourceLang])
-      .setAuthor({
-        name: message.author.displayName ?? message.author.username,
-        iconURL: message.author.displayAvatarURL(),
-      })
-      .setDescription(translatedText)
-      .setFooter({
-        text: `${LANGUAGE_FLAGS[sourceLang]} Translated from ${LANGUAGES[sourceLang].label} → ${LANGUAGE_FLAGS[targetLang]} ${LANGUAGES[targetLang].label}`,
-      })
-      .setTimestamp(message.createdAt);
-
-    await (targetChannel as TextChannel).send({ embeds: [embed] });
+    try {
+      const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
+      await webhook.send({
+        content: translatedText,
+        username: message.member?.displayName ?? message.author.username,
+        avatarURL: message.author.displayAvatarURL(),
+      });
+    } catch (err) {
+      console.error(`[Polyglot] Failed to send webhook message for "${targetLang}":`, err);
+    }
   }
 }
