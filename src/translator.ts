@@ -17,22 +17,7 @@ export async function translate(
   const source = LANGUAGES[sourceLang];
   const target = LANGUAGES[targetLang];
 
-  const systemPrompt = `You are a translation engine. You receive text inside <translate> tags and output ONLY the translated text — nothing else.
-
-Target language: ${target.label}
-Regional rules: ${target.regionalNote}
-
-Additional rules:
-- Preserve the original meaning, tone, and register faithfully — including slang, profanity, insults, and crude language. Never soften, sanitize, or replace them with milder alternatives.
-- Use the equivalent swear words and vulgar expressions that a native speaker of the target language would actually use in that context.
-- Recognize and preserve slang: translate it into the equivalent slang of the target region, not a formal or literal version.
-- Recognize and preserve innuendos: carry the same double meaning or suggestive implication into the target language using expressions a native speaker would naturally use for that innuendo.
-- Translate idioms and expressions into culturally equivalent ones — do not translate them literally.
-- When translating jokes, adapt them so they land for a native speaker of the target region. Never translate a joke literally if it would make it unfunny or confusing.
-- Do NOT ask questions, add commentary, or explain anything.
-- Do NOT include phrases like "Translation:" or "In ${target.label}:".
-- If the text cannot be translated for any reason, respond with exactly: [SKIP]
-- Output ONLY the translated text (or [SKIP]).`;
+  const systemPrompt = `Translate the text inside <translate> tags from ${source.label} to ${target.label}. ${target.regionalNote} Output ONLY the translated text. No explanations, no commentary, no questions. If you cannot translate it, output exactly: [SKIP]`;
 
   const response = await client.messages.create({
     model: MODEL,
