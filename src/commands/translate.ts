@@ -1,9 +1,4 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  EmbedBuilder,
-  Colors,
-} from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { LanguageCode, LANGUAGES, ALL_LANGUAGE_CODES } from '../config.js';
 import { translateToAll } from '../translator.js';
 
@@ -11,12 +6,6 @@ const LANGUAGE_FLAGS: Record<LanguageCode, string> = {
   en: '🇺🇸',
   es: '🇲🇽',
   pt: '🇧🇷',
-};
-
-const LANGUAGE_COLORS: Record<LanguageCode, number> = {
-  en: Colors.Blue,
-  es: Colors.Red,
-  pt: Colors.Green,
 };
 
 export const data = new SlashCommandBuilder()
@@ -45,7 +34,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const sourceLang = interaction.options.getString('from', true) as LanguageCode;
   const targetLangs = ALL_LANGUAGE_CODES.filter((l) => l !== sourceLang);
 
-  // Defer ephemerally so we have time to call Claude
   await interaction.deferReply({ ephemeral: true });
 
   let translations: Map<LanguageCode, string>;
@@ -57,20 +45,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return;
   }
 
-  const embeds = [
-    // Original
-    new EmbedBuilder()
-      .setColor(LANGUAGE_COLORS[sourceLang])
-      .setTitle(`${LANGUAGE_FLAGS[sourceLang]} Original — ${LANGUAGES[sourceLang].label}`)
-      .setDescription(text),
-    // Translations
-    ...targetLangs.map((lang) =>
-      new EmbedBuilder()
-        .setColor(LANGUAGE_COLORS[lang])
-        .setTitle(`${LANGUAGE_FLAGS[lang]} ${LANGUAGES[lang].label}`)
-        .setDescription(translations.get(lang) ?? '—')
+  const lines = [
+    `${LANGUAGE_FLAGS[sourceLang]} **${LANGUAGES[sourceLang].label}:** ${text}`,
+    ...targetLangs.map(
+      (lang) => `${LANGUAGE_FLAGS[lang]} **${LANGUAGES[lang].label}:** ${translations.get(lang) ?? '—'}`
     ),
   ];
 
-  await interaction.editReply({ embeds });
+  await interaction.editReply({ content: lines.join('\n') });
 }
