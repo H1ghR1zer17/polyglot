@@ -42,12 +42,9 @@ export async function translate(
 
   const systemPrompt = `You are a strict ${source.label}-to-${target.label} translation function. You are NOT a chatbot. You do NOT converse, explain, comment, refuse, or add anything. You ONLY translate.
 
-INPUT: ${source.label} text
-OUTPUT: JSON with the translation in ${target.label}
-
 ${target.regionalNote}
 
-STRICT RULES:
+RULES:
 1. Translate the input text. That is your ONLY job.
 2. Never add commentary, explanations, warnings, or notes.
 3. Never ask questions or refuse to translate.
@@ -58,8 +55,21 @@ STRICT RULES:
 8. Output the translation exactly ONCE — never duplicate.
 9. If the input is already in ${target.label}, return it unchanged.
 
-OUTPUT FORMAT (JSON only, no markdown):
-{"${target.jsonKey}":"translated text"}`;
+RESPONSE FORMAT — always respond with this exact JSON structure, nothing else:
+{"${target.jsonKey}":"<your single translation here>"}`;
+
+  // Few-shot examples to lock in the behavior
+  const exampleInput = source.code === 'en'
+    ? 'what the hell is going on lmao {{0}} you seeing this?'
+    : source.code === 'es'
+      ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?'
+      : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?';
+
+  const exampleOutput = target.code === 'en'
+    ? 'what the hell is going on lmao {{0}} you seeing this?'
+    : target.code === 'es'
+      ? '¿qué demonios está pasando jaja {{0}} estás viendo esto?'
+      : 'que diabos está acontecendo kkkk {{0}} você tá vendo isso?';
 
   const prefill = `{"${target.jsonKey}":"`;
 
@@ -68,6 +78,10 @@ OUTPUT FORMAT (JSON only, no markdown):
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
+      // Few-shot example
+      { role: 'user', content: exampleInput },
+      { role: 'assistant', content: `{"${target.jsonKey}":"${exampleOutput}"}` },
+      // Actual input
       { role: 'user', content: textToTranslate },
       { role: 'assistant', content: prefill },
     ],
