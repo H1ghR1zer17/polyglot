@@ -27,6 +27,7 @@ Important rules:
 - Recognize and preserve slang: translate it into the equivalent slang of the target region, not a formal or literal version.
 - Recognize and preserve innuendos: carry the same double meaning or suggestive implication into the target language using expressions a native speaker would naturally use for that innuendo.
 - Translate idioms and expressions into culturally equivalent ones in the target language — do not translate them literally.
+- When translating jokes, prioritize making them land for a native speaker of the target region. If the joke relies on wordplay, a pun, or a cultural reference that doesn't exist in the target language, adapt it into an equivalent joke that has the same comedic effect and makes sense to that audience. Never translate a joke literally if it would make it unfunny or confusing.
 - Do NOT add explanations, notes, or commentary.
 - Do NOT include phrases like "Translation:" or "In ${target.label}:".
 - Output ONLY the translated text, nothing else.`;
