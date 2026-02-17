@@ -7,12 +7,21 @@ import { linkMessages } from '../messageMap.js';
 /** Matches messages that are only emoji (unicode or custom Discord emoji) */
 const EMOJI_ONLY = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|<a?:\w+:\d+>|\s)+$/u;
 
+/** Dedup cache — prevents processing the same message twice */
+const processed = new Set<string>();
+const CACHE_TTL = 60_000; // 1 minute
+
 export async function handleMessageCreate(
   message: Message,
   channelMap: Record<LanguageCode, string>
 ): Promise<void> {
   // Ignore bot and webhook messages to prevent translation loops
   if (message.author.bot || message.webhookId) return;
+
+  // Dedup — skip if we already processed this message
+  if (processed.has(message.id)) return;
+  processed.add(message.id);
+  setTimeout(() => processed.delete(message.id), CACHE_TTL);
 
   // Ignore messages outside the configured language channels
   const sourceLang = getLanguageByChannelId(message.channelId, channelMap);
