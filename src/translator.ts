@@ -61,9 +61,12 @@ Respond with ONLY this JSON shape, no markdown, no code fences:
     if (!translation || translation === 'null') return null;
     return translation.trim();
   } catch {
-    // Fallback: extract text before the closing quote
-    const match = block.text.match(/^(.*?)"/);
-    return match ? match[1].trim() || null : null;
+    // Fallback: strip any JSON artifacts and return the raw text
+    const cleaned = block.text
+      .replace(/"\s*\}\s*$/, '')  // trailing "}
+      .replace(/^"|"$/g, '')      // stray quotes
+      .trim();
+    return cleaned || null;
   }
 }
 
