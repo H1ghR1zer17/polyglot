@@ -23,8 +23,8 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     label: 'Spanish',
     channelEnvKey: 'CHANNEL_ES',
     regionalNote:
-      'Use Mexican Spanish from Mexico City (CDMX). Default to relaxed, conversational tone — not overly formal but not exaggerated street slang either. Think how an educated young adult from CDMX texts casually. Use natural Mexican vocabulary and expressions but do NOT overdo it with words like "órale", "wey", "neta" in every sentence — only use them where they genuinely fit. Avoid Castilian/Spain Spanish. Use "ustedes" not "vosotros".',
-    jsonKey: 'cdmx_chilango_spanish_translation_with_mexico_city_slang_albures_and_profanity',
+      'Use neutral, standard Spanish — the kind understood across all Spanish-speaking countries. Avoid region-specific slang, colloquialisms, or expressions tied to any one country. Default to relaxed, conversational tone — think how an educated young adult texts casually. Use "ustedes" not "vosotros". Keep it natural and clear.',
+    jsonKey: 'neutral_standard_spanish_translation_conversational_tone_preserving_profanity',
   },
   pt: {
     code: 'pt',
