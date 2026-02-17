@@ -15,7 +15,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     code: 'en',
     label: 'English',
     channelEnvKey: 'CHANNEL_EN',
-    regionalNote: 'Use clear, natural English. Match the tone and register of the original message (casual, formal, slang, etc.).',
+    regionalNote: 'Use clear, natural, casual English — like texting a friend. Default to informal tone unless the original message is clearly formal.',
     jsonKey: 'natural_english_translation_preserving_tone_slang_and_profanity',
   },
   es: {
@@ -23,7 +23,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     label: 'Spanish',
     channelEnvKey: 'CHANNEL_ES',
     regionalNote:
-      'Use Mexican Spanish from Mexico City (CDMX/chilango) specifically. Use vocabulary, slang, and expressions native to la Ciudad de México — including chilango street slang, albures, and colloquialisms. Avoid Castilian/Spain Spanish and avoid generic Latin American terms when a more specific CDMX word exists. Use "ustedes" not "vosotros". Match the tone and register of the original message (casual, formal, slang, etc.).',
+      'Use Mexican Spanish from Mexico City (CDMX/chilango) specifically. Default to casual, everyday chilango speech — like texting a friend from la Ciudad de México. Use vocabulary, slang, and expressions native to CDMX — including chilango street slang, albures, and colloquialisms. Avoid Castilian/Spain Spanish and avoid generic Latin American terms when a more specific CDMX word exists. Use "ustedes" not "vosotros".',
     jsonKey: 'cdmx_chilango_spanish_translation_with_mexico_city_slang_albures_and_profanity',
   },
   pt: {
@@ -31,7 +31,7 @@ export const LANGUAGES: Record<LanguageCode, LanguageConfig> = {
     label: 'Portuguese',
     channelEnvKey: 'CHANNEL_PT',
     regionalNote:
-      'Use Brazilian Portuguese from Rio de Janeiro specifically. Use carioca vocabulary, slang, and expressions — including Rio street slang and colloquialisms. Use "você" as the default second person. Prefer the informal, warm speech style typical of Rio de Janeiro. Match the tone and register of the original message (casual, formal, slang, etc.).',
+      'Use Brazilian Portuguese from Rio de Janeiro specifically. Default to casual, everyday carioca speech — like texting a friend from Rio. Use carioca vocabulary, slang, and expressions — including Rio street slang and colloquialisms. Use "você" as the default second person. Prefer the informal, warm speech style typical of Rio de Janeiro.',
     jsonKey: 'carioca_rio_brazilian_portuguese_translation_with_rio_slang_informal_tone_and_profanity',
   },
 };
