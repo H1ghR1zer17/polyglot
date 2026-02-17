@@ -4,6 +4,9 @@ import { translateToAll } from '../translator.js';
 import { getOrCreateWebhook } from '../webhooks.js';
 import { linkMessages } from '../messageMap.js';
 
+/** Matches messages that are only emoji (unicode or custom Discord emoji) */
+const EMOJI_ONLY = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|<a?:\w+:\d+>|\s)+$/u;
+
 export async function handleMessageCreate(
   message: Message,
   channelMap: Record<LanguageCode, string>
@@ -15,12 +18,43 @@ export async function handleMessageCreate(
   const sourceLang = getLanguageByChannelId(message.channelId, channelMap);
   if (!sourceLang) return;
 
-  // Ignore empty messages (attachments only, stickers, etc.)
   const text = message.content.trim();
-  if (!text) return;
+  const hasStickers = message.stickers.size > 0;
+  const isEmojiOnly = text && EMOJI_ONLY.test(text);
 
+  // Nothing to forward or translate
+  if (!text && !hasStickers) return;
+
+  const username = message.member?.displayName ?? message.author.username;
+  const avatarURL = message.author.displayAvatarURL();
+  const linkedIds: string[] = [message.id];
   const targetLangs = ALL_LANGUAGE_CODES.filter((lang) => lang !== sourceLang);
 
+  // Emoji-only or sticker-only messages: forward as-is, no translation needed
+  if (isEmojiOnly || (!text && hasStickers)) {
+    for (const targetLang of targetLangs) {
+      const targetChannelId = channelMap[targetLang];
+      const targetChannel = message.client.channels.cache.get(targetChannelId);
+      if (!targetChannel?.isTextBased()) continue;
+
+      try {
+        const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
+        const sent = await webhook.send({
+          content: text || undefined,
+          username,
+          avatarURL,
+        });
+        linkedIds.push(sent.id);
+      } catch (err) {
+        console.error(`[Polyglot] Failed to forward emoji/sticker for "${targetLang}":`, err);
+      }
+    }
+
+    if (linkedIds.length > 1) linkMessages(linkedIds);
+    return;
+  }
+
+  // Text messages: translate
   let translations: Map<LanguageCode, string>;
   try {
     translations = await translateToAll(text, sourceLang, targetLangs);
@@ -28,10 +62,6 @@ export async function handleMessageCreate(
     console.error(`[Polyglot] Translation error:`, err);
     return;
   }
-
-  const username = message.member?.displayName ?? message.author.username;
-  const avatarURL = message.author.displayAvatarURL();
-  const linkedIds: string[] = [message.id];
 
   for (const [targetLang, translatedText] of translations) {
     const targetChannelId = channelMap[targetLang];
@@ -51,7 +81,6 @@ export async function handleMessageCreate(
     }
   }
 
-  // Link original + all translations so reactions can be mirrored
   if (linkedIds.length > 1) {
     linkMessages(linkedIds);
   }

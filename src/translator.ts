@@ -30,6 +30,7 @@ Rules:
 - Preserve innuendos — carry the same double meaning into the target language.
 - Translate idioms and expressions into culturally equivalent ones, not literally.
 - Adapt jokes so they land for a native speaker of the target region.
+- Output the translation ONCE. Never repeat or duplicate the translated text.
 - If you cannot translate the text, set the value to null.
 
 Respond with ONLY this JSON shape, no markdown, no code fences:
