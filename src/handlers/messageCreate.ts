@@ -1,7 +1,6 @@
 import { Message, TextChannel } from 'discord.js';
 import { LanguageCode, ALL_LANGUAGE_CODES, getLanguageByChannelId } from '../config.js';
 import { translateToAll } from '../translator.js';
-import { getOrCreateWebhook } from '../webhooks.js';
 
 export async function handleMessageCreate(
   message: Message,
@@ -28,7 +27,6 @@ export async function handleMessageCreate(
     return;
   }
 
-  // Post each translation via webhook so it appears as the original user
   for (const [targetLang, translatedText] of translations) {
     const targetChannelId = channelMap[targetLang];
     const targetChannel = message.client.channels.cache.get(targetChannelId);
@@ -38,15 +36,6 @@ export async function handleMessageCreate(
       continue;
     }
 
-    try {
-      const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
-      await webhook.send({
-        content: translatedText,
-        username: message.member?.displayName ?? message.author.username,
-        avatarURL: message.author.displayAvatarURL(),
-      });
-    } catch (err) {
-      console.error(`[Polyglot] Failed to send webhook message for "${targetLang}":`, err);
-    }
+    await (targetChannel as TextChannel).send(translatedText);
   }
 }
