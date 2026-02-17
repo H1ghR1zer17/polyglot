@@ -17,7 +17,7 @@ export async function translate(
   const source = LANGUAGES[sourceLang];
   const target = LANGUAGES[targetLang];
 
-  const systemPrompt = `You are a translation engine. You receive text inside <translate> tags and output ONLY the translated text — nothing else.
+  const systemPrompt = `You are a translation engine. You receive text inside <translate> tags and output ONLY the translated text inside <result> tags — nothing else.
 
 Target language: ${target.label}
 Regional rules: ${target.regionalNote}
@@ -31,8 +31,8 @@ Additional rules:
 - When translating jokes, adapt them so they land for a native speaker of the target region. Never translate a joke literally if it would make it unfunny or confusing.
 - Do NOT ask questions, add commentary, or explain anything.
 - Do NOT include phrases like "Translation:" or "In ${target.label}:".
-- If the text cannot be translated for any reason, respond with exactly: [SKIP]
-- Output ONLY the translated text (or [SKIP]).`;
+- If the text cannot be translated for any reason, respond with exactly: <result>[SKIP]</result>
+- Output format: <result>translated text here</result>`;
 
   const response = await client.messages.create({
     model: MODEL,
@@ -43,6 +43,12 @@ Additional rules:
         role: 'user',
         content: `<translate>${text}</translate>`,
       },
+      {
+        // Assistant prefill — forces Claude to continue with the translation
+        // instead of opening a conversational response
+        role: 'assistant',
+        content: '<result>',
+      },
     ],
   });
 
@@ -51,7 +57,9 @@ Additional rules:
     throw new Error('Unexpected response type from Claude');
   }
 
-  const result = block.text.trim();
+  // Extract content from <result> tags (prefill starts with <result>, Claude closes it)
+  const match = block.text.match(/<result>([\s\S]*?)<\/result>/);
+  const result = (match ? match[1] : block.text).trim();
   return result === '[SKIP]' ? null : result;
 }
 
