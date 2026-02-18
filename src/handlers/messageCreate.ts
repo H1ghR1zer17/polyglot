@@ -1,4 +1,4 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message, TextChannel, StickerFormatType } from 'discord.js';
 import { LanguageCode, ALL_LANGUAGE_CODES, getLanguageByChannelId } from '../config.js';
 import { translateToAll } from '../translator.js';
 import { getOrCreateWebhook } from '../webhooks.js';
@@ -10,7 +10,7 @@ const EMOJI_ONLY = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|<a?:\w+:\
 /** Dedup cache — prevents processing the same message twice */
 const processed = new Set<string>();
 /** Send-side dedup — prevents sending to the same channel twice for one source message */
-const sent = new Set<string>();
+const sentDedup = new Set<string>();
 const CACHE_TTL = 60_000; // 1 minute
 
 /**
@@ -39,10 +39,12 @@ export async function handleMessageCreate(
 
   const text = message.content.trim();
   const hasStickers = message.stickers.size > 0;
-  const isEmojiOnly = text && EMOJI_ONLY.test(text);
+  const hasAttachments = message.attachments.size > 0;
+  const hasGifEmbed = message.embeds.some((e) => e.data?.type === 'gifv');
+  const isEmojiOnly = text !== '' && EMOJI_ONLY.test(text);
 
   // Nothing to forward or translate
-  if (!text && !hasStickers) return;
+  if (!text && !hasStickers && !hasAttachments && !hasGifEmbed) return;
 
   const username = message.member?.displayName ?? message.author.username;
   const avatarURL = message.author.displayAvatarURL();
@@ -51,8 +53,23 @@ export async function handleMessageCreate(
   ];
   const targetLangs = ALL_LANGUAGE_CODES.filter((lang) => lang !== sourceLang);
 
-  // Emoji-only or sticker-only messages: forward as-is, no translation needed
-  if (isEmojiOnly || (!text && hasStickers)) {
+  // Build file arrays for forwarding
+  const attachmentFiles = [...message.attachments.values()].map((att) => ({
+    attachment: att.url,
+    name: att.name ?? 'file',
+  }));
+
+  const stickerFiles = [...message.stickers.values()]
+    .filter((s) => s.format !== StickerFormatType.Lottie) // Lottie is a JSON animation, can't render as image
+    .map((s) => ({ attachment: s.url, name: `${s.name}.png` }));
+
+  const allFiles = [...attachmentFiles, ...stickerFiles];
+
+  // Forward as-is (no translation): emoji-only, GIF embeds, sticker/attachment-only
+  const shouldForwardAsIs =
+    isEmojiOnly || hasGifEmbed || (!text && (hasStickers || hasAttachments));
+
+  if (shouldForwardAsIs) {
     for (const targetLang of targetLangs) {
       const targetChannelId = channelMap[targetLang];
       const targetChannel = message.client.channels.cache.get(targetChannelId);
@@ -60,10 +77,15 @@ export async function handleMessageCreate(
 
       try {
         const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
-        const sent = await webhook.send({ content: text || undefined, username, avatarURL });
-        linkedMsgs.push({ messageId: sent.id, channelId: targetChannelId });
+        const sentMsg = await webhook.send({
+          content: text || undefined,
+          files: allFiles.length > 0 ? allFiles : undefined,
+          username,
+          avatarURL,
+        });
+        linkedMsgs.push({ messageId: sentMsg.id, channelId: targetChannelId });
       } catch (err) {
-        console.error(`[Polyglot] Failed to forward emoji/sticker for "${targetLang}":`, err);
+        console.error(`[Polyglot] Failed to forward for "${targetLang}":`, err);
       }
     }
 
@@ -71,7 +93,7 @@ export async function handleMessageCreate(
     return;
   }
 
-  // Text messages: translate
+  // Text messages: translate (and forward any attachments alongside)
   let translations: Map<LanguageCode, string>;
   try {
     translations = await translateToAll(text, sourceLang, targetLangs);
@@ -91,27 +113,33 @@ export async function handleMessageCreate(
 
     // Send-side dedup — skip if we already sent for this source→target combo
     const sendKey = `${message.id}:${targetChannelId}`;
-    if (sent.has(sendKey)) continue;
-    sent.add(sendKey);
-    setTimeout(() => sent.delete(sendKey), CACHE_TTL);
+    if (sentDedup.has(sendKey)) continue;
+    sentDedup.add(sendKey);
+    setTimeout(() => sentDedup.delete(sendKey), CACHE_TTL);
 
     try {
       const replyTargetId = findReplyTarget(message, targetChannelId);
 
-      let sent: Message;
+      let sentMsg: Message;
       if (replyTargetId) {
         // Use bot's channel.send with reply — shows native Discord reply arrow
-        sent = await (targetChannel as TextChannel).send({
+        sentMsg = await (targetChannel as TextChannel).send({
           content: `**${username}:** ${translatedText}`,
+          files: allFiles.length > 0 ? allFiles : undefined,
           reply: { messageReference: replyTargetId, failIfNotExists: false },
         });
       } else {
         // Regular message — use webhook to show as the original user
         const webhook = await getOrCreateWebhook(targetChannel as TextChannel);
-        sent = await webhook.send({ content: translatedText, username, avatarURL }) as Message;
+        sentMsg = await webhook.send({
+          content: translatedText,
+          files: allFiles.length > 0 ? allFiles : undefined,
+          username,
+          avatarURL,
+        }) as Message;
       }
 
-      linkedMsgs.push({ messageId: sent.id, channelId: targetChannelId });
+      linkedMsgs.push({ messageId: sentMsg.id, channelId: targetChannelId });
     } catch (err) {
       console.error(`[Polyglot] Failed to send message for "${targetLang}":`, err);
     }
